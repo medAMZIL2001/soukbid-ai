@@ -1,0 +1,65 @@
+name: soukbid-ai
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "127.0.0.1:${SOUKBID_BACKEND_PORT:-8000}:8000"
+    networks: [soukbid]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=2).close()"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: ${SOUKBID_POSTGRES_DB:-soukbid}
+      POSTGRES_USER: ${SOUKBID_POSTGRES_USER:-soukbid}
+      POSTGRES_PASSWORD: "${SOUKBID_POSTGRES_PASSWORD:?Set SOUKBID_POSTGRES_PASSWORD in .env}"
+    ports:
+      - "127.0.0.1:${SOUKBID_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [soukbid]
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:v1.15.5
+    ports:
+      - "127.0.0.1:${SOUKBID_QDRANT_PORT:-6333}:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks: [soukbid]
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -ec
+        - |
+          exec 3<>/dev/tcp/127.0.0.1/6333
+          printf 'GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3
+          read -r status <&3
+          [[ "$$status" == "HTTP/1.1 200 "* ]]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  soukbid:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  qdrant_data:

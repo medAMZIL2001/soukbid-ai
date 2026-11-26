@@ -1,0 +1,32 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Python and editor artifacts
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local documents, databases, and models
+/data/raw/
+/data/processed/
+/data/private/
+*.sqlite3
+/models/
